@@ -2,39 +2,53 @@ package com.example.catspictures
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Toast
 import com.example.catspictures.databinding.ActivityMainBinding
-import com.example.catspictures.model.CatImageItem
+import com.example.catspictures.model.CatImage
 import com.example.catspictures.model.CatService
 import com.squareup.picasso.Picasso
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import retrofit2.*
-import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
-const val BASE_URL = "https://api.thecatapi.com/v1/"
+
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
+    private lateinit var catService: CatService
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        val retrofit = Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
+        catService = CatService.create()
 
-        val catService = retrofit.create(CatService::class.java)
+        setContentView(binding.root)
+
 
         binding.button.setOnClickListener {
-            CoroutineScope(Dispatchers.IO).launch {
-                val result = catService.getImage()
+            val result = catService.getImage()
 
-                runOnUiThread {
-                    Picasso.get().load(result.first().url).into(binding.image)
+            result.enqueue(
+                object: Callback<CatImage> {
+
+                    override fun onResponse(call: Call<CatImage>, response: Response<CatImage>) {
+//                        if (response.body() != null) {
+//                            for (picture in response.body()!!) {
+//                                Picasso.get().load(picture.url).into(binding.image)
+//                            }
+//                        }
+
+                        if (response.body() != null) Picasso.get().load(response.body()!!.first().url).into(binding.image)
+                    }
+
+                    override fun onFailure(call: Call<CatImage>, t: Throwable) {
+                       Toast.makeText(applicationContext, "Getting image error. Try again", Toast.LENGTH_SHORT).show()
+                    }
+
                 }
-            }
+            )
+
         }
 
     }
